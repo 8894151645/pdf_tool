@@ -85,35 +85,39 @@ python pdf_toolbox_gui.py
 ### 格式转换
 
 - **PDF → 图片**：选择输入 PDF、输出目录，可设置 DPI 和图片格式。
-- **图片 → PDF**：在“多图片输入”里添加图片，选择输出 PDF 路径后执行。
-- **PDF → Word**：选择输入 PDF 和输出 `.docx` 文件路径。
+- **图片 → PDF**：在“多图片输入”里添加图片，选择输出 PDF 路径后执行；如果输出路径没有 `.pdf`，程序会自动补充。
+- **PDF → Word**：选择输入 PDF 和输出 `.docx` 文件路径；如果输出路径没有 `.docx`，程序会自动补充。
+  - `layout`：默认模式，尽量保留 PDF 原版式。
+  - `text`：纯文本优化模式，版式更干净，适合默认模式转换后排版很乱的文件，但不保留原始页面布局。
 - **Word/PPT → PDF**：选择 Word/PPT 文件和输出目录。
-- **PDF → Excel**：选择输入 PDF 和输出 `.xlsx` 文件路径。
-- **PDF → 纯文本**：选择输入 PDF 和输出 `.txt` 文件路径。
+- **PDF → Excel**：选择输入 PDF 和输出 `.xlsx` 文件路径；如果输出路径没有 `.xlsx`，程序会自动补充。
+- **PDF → 纯文本**：选择输入 PDF 和输出 `.txt` 文件路径；如果输出路径没有 `.txt`，程序会自动补充。
 
 ## 命令行用法速查
 
 | 功能 | 命令示例 |
 |------|---------|
-| 合并 | `python pdf_toolbox.py merge a.pdf b.pdf -o out.pdf` |
+| 合并 | `python pdf_toolbox.py merge a.pdf b.pdf -o out` |
 | 拆分 | `python pdf_toolbox.py split in.pdf -s 2 -o 输出目录` |
-| 删除页面 | `python pdf_toolbox.py delete in.pdf -p 2,4 -o out.pdf` |
-| 提取页面 | `python pdf_toolbox.py extract in.pdf -p 1,3-5 -o out.pdf` |
-| 调整页序 | `python pdf_toolbox.py reorder in.pdf -r 3,1,2 -o out.pdf` |
-| 旋转 | `python pdf_toolbox.py rotate in.pdf -a 90 -o out.pdf` |
+| 删除页面 | `python pdf_toolbox.py delete in.pdf -p 2,4 -o out` |
+| 提取页面 | `python pdf_toolbox.py extract in.pdf -p 1,3-5 -o out` |
+| 调整页序 | `python pdf_toolbox.py reorder in.pdf -r 3,1,2 -o out` |
+| 旋转 | `python pdf_toolbox.py rotate in.pdf -a 90 -o out` |
 | PDF→图片 | `python pdf_toolbox.py pdf2img in.pdf --dpi 200` |
-| 图片→PDF | `python pdf_toolbox.py img2pdf 1.jpg 2.jpg -o out.pdf` |
-| PDF→Word | `python pdf_toolbox.py pdf2word in.pdf -o out.docx` |
+| 图片→PDF | `python pdf_toolbox.py img2pdf 1.jpg 2.jpg -o out` |
+| PDF→Word | `python pdf_toolbox.py pdf2word in.pdf -o out --mode layout` |
+| PDF→Word 纯文本优化 | `python pdf_toolbox.py pdf2word in.pdf -o out --mode text` |
 | Office→PDF | `python pdf_toolbox.py office2pdf in.docx` |
-| PDF→Excel | `python pdf_toolbox.py pdf2excel in.pdf -o out.xlsx` |
-| PDF→文本 | `python pdf_toolbox.py pdf2text in.pdf -o out.txt` |
+| PDF→Excel | `python pdf_toolbox.py pdf2excel in.pdf -o out` |
+| PDF→文本 | `python pdf_toolbox.py pdf2text in.pdf -o out` |
 
-> 页码从 1 开始，支持 `2,4,6-8` 这种写法。查看帮助：`python pdf_toolbox.py -h`
+> 页码从 1 开始，支持 `2,4,6-8` 这种写法。输出路径如果没有后缀，程序会自动补上对应后缀，例如 `.pdf`、`.docx`、`.xlsx`、`.txt`。查看帮助：`python pdf_toolbox.py -h`
 
 ## 重要说明
 
 - **Python 版本**：推荐 Python 3.9+；如果你已经安装 Python 3.8，可以先直接使用，依赖安装失败时再考虑升级。
 - **PDF→Word / PDF→Excel** 对扫描件或图片型 PDF 效果有限，这类文件需要 OCR。
+- **PDF→Word**：默认 `layout` 模式会尽量还原原 PDF 版式，但复杂 PDF 仍可能排版混乱；如果只需要内容，建议使用 `text` 模式获得更干净的 Word 文档。
 - **Word/PPT→PDF** 需要额外安装 [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/)。
 - `install.bat` 只安装 Python 依赖，不会自动安装 LibreOffice。
 
@@ -123,5 +127,6 @@ python pdf_toolbox_gui.py
 - [pypdf](https://github.com/py-pdf/pypdf) — 页面组织
 - [PyMuPDF](https://github.com/pymupdf/PyMuPDF) — PDF 转图片/文本
 - [Pillow](https://github.com/python-pillow/Pillow) — 图片转 PDF
-- [pdf2docx](https://github.com/ArtifexSoftware/pdf2docx) — PDF 转 Word
+- [pdf2docx](https://github.com/ArtifexSoftware/pdf2docx) — PDF 转 Word 版式模式
+- [python-docx](https://python-docx.readthedocs.io/) — PDF 转 Word 纯文本优化模式
 - [pdfplumber](https://github.com/jsvine/pdfplumber) + [openpyxl](https://openpyxl.readthedocs.io/) — PDF 转 Excel

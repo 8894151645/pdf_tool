@@ -24,8 +24,8 @@ class PdfToolboxGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("PDF 工具箱")
-        self.geometry("980x680")
-        self.minsize(900, 620)
+        self.geometry("980x700")
+        self.minsize(900, 640)
 
         self.single_input = tk.StringVar()
         self.output_file = tk.StringVar()
@@ -36,8 +36,7 @@ class PdfToolboxGUI(tk.Tk):
         self.rotate_angle = tk.StringVar(value="90")
         self.dpi = tk.StringVar(value="150")
         self.image_format = tk.StringVar(value="png")
-
-        self.multi_inputs = []
+        self.word_mode = tk.StringVar(value="layout")
 
         self._build_ui()
 
@@ -144,6 +143,12 @@ class PdfToolboxGUI(tk.Tk):
         row2.pack(fill=tk.X, pady=4)
         ttk.Label(row2, text="图片格式：", width=12).pack(side=tk.LEFT)
         ttk.Combobox(row2, textvariable=self.image_format, values=["png", "jpg"], width=10, state="readonly").pack(side=tk.LEFT)
+
+        row3 = ttk.Frame(opt)
+        row3.pack(fill=tk.X, pady=4)
+        ttk.Label(row3, text="Word 模式：", width=12).pack(side=tk.LEFT)
+        ttk.Combobox(row3, textvariable=self.word_mode, values=["layout", "text"], width=10, state="readonly").pack(side=tk.LEFT)
+        ttk.Label(row3, text="layout 保留版式；text 更干净但不保留原版式").pack(side=tk.LEFT, padx=8)
 
         self._separator(parent)
 
@@ -330,7 +335,7 @@ class PdfToolboxGUI(tk.Tk):
             self.error("请选择输出 Word 文件（.docx）。")
             return
         if input_file:
-            self.run_cli(["pdf2word", input_file, "-o", output])
+            self.run_cli(["pdf2word", input_file, "-o", output, "--mode", self.word_mode.get()])
 
     def run_office2pdf(self):
         input_file = self.single_input.get().strip()

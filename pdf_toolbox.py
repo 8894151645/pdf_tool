@@ -35,6 +35,22 @@ def ensure_dir(path):
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
+def ensure_extension(path, extension):
+    """如果输出路径没有后缀，则自动补充指定后缀。"""
+    if not extension.startswith('.'):
+        extension = '.' + extension
+    output_path = Path(path)
+    if output_path.suffix:
+        return str(output_path)
+    return str(output_path.with_suffix(extension))
+
+
+def write_pdf(writer, output_path):
+    output_path = ensure_extension(output_path, '.pdf')
+    writer.write(output_path)
+    return output_path
+
+
 # ==================== 1. 页面组织（pypdf）====================
 
 def cmd_merge(args):
@@ -43,9 +59,9 @@ def cmd_merge(args):
     for path in args.inputs:
         print(f"  添加: {path}")
         writer.append(path)
-    writer.write(args.output)
+    output = write_pdf(writer, args.output)
     writer.close()
-    print(f"✅ 合并完成 -> {args.output}")
+    print(f"✅ 合并完成 -> {output}")
 
 
 def cmd_split(args):
@@ -74,8 +90,8 @@ def cmd_delete(args):
     for i, page in enumerate(reader.pages, start=1):
         if i not in to_delete:
             writer.add_page(page)
-    writer.write(args.output)
-    print(f"✅ 已删除页面 {sorted(to_delete)} -> {args.output}")
+    output = write_pdf(writer, args.output)
+    print(f"✅ 已删除页面 {sorted(to_delete)} -> {output}")
 
 
 def cmd_extract(args):
@@ -85,8 +101,8 @@ def cmd_extract(args):
     writer = PdfWriter()
     for p in pages:
         writer.add_page(reader.pages[p - 1])
-    writer.write(args.output)
-    print(f"✅ 已提取页面 {pages} -> {args.output}")
+    output = write_pdf(writer, args.output)
+    print(f"✅ 已提取页面 {pages} -> {output}")
 
 
 def cmd_reorder(args):
@@ -96,8 +112,8 @@ def cmd_reorder(args):
     writer = PdfWriter()
     for p in order:
         writer.add_page(reader.pages[p - 1])
-    writer.write(args.output)
-    print(f"✅ 已按新顺序排列 -> {args.output}")
+    output = write_pdf(writer, args.output)
+    print(f"✅ 已按新顺序排列 -> {output}")
 
 
 def cmd_rotate(args):
@@ -109,9 +125,9 @@ def cmd_rotate(args):
         if target is None or i in target:
             page.rotate(args.angle)
         writer.add_page(page)
-    writer.write(args.output)
+    output = write_pdf(writer, args.output)
     scope = f"第 {sorted(target)} 页" if target else "全部页面"
-    print(f"✅ 已旋转 {scope} {args.angle}° -> {args.output}")
+    print(f"✅ 已旋转 {scope} {args.angle}° -> {output}")
 
 
 # ==================== 2. 格式转换 ====================
@@ -133,24 +149,74 @@ def cmd_pdf2img(args):
 
 def cmd_img2pdf(args):
     from PIL import Image
+    output = ensure_extension(args.output, '.pdf')
     images = []
-    for p in args.inputs:
-        img = Image.open(p)
-        images.append(img.convert('RGB') if img.mode != 'RGB' else img)
-    images[0].save(args.output, save_all=True, append_images=images[1:])
-    print(f"✅ {len(images)} 张图片合成 PDF -> {args.output}")
+    try:
+        for p in args.inputs:
+            img = Image.open(p)
+            images.append(img.convert('RGB') if img.mode != 'RGB' else img.copy())
+            img.close()
+        images[0].save(output, format='PDF', save_all=True, append_images=images[1:])
+        print(f"✅ {len(images)} 张图片合成 PDF -> {output}")
+    finally:
+        for img in images:
+            try:
+                img.close()
+            except Exception:
+                pass
 
 
 def cmd_pdf2word(args):
+    output = ensure_extension(args.output, '.docx')
+    if args.mode == 'text':
+        pdf2word_text(args.input, output)
+        print(f"✅ PDF 转 Word（纯文本优化模式）完成 -> {output}")
+        return
+
     from pdf2docx import Converter
     cv = Converter(args.input)
-    cv.convert(args.output)
-    cv.close()
-    print(f"✅ PDF 转 Word 完成 -> {args.output}")
+    try:
+        cv.convert(output)
+    finally:
+        cv.close()
+    print(f"✅ PDF 转 Word（版式模式）完成 -> {output}")
+    print("ℹ️ 如果版式混乱，可尝试：pdf2word 输入.pdf -o 输出.docx --mode text")
+
+
+def pdf2word_text(input_pdf, output_docx):
+    """把 PDF 文本提取成更稳定、干净的 Word 文档。适合版式转换很乱的 PDF。"""
+    import fitz
+    from docx import Document
+    from docx.shared import Pt
+
+    doc = fitz.open(input_pdf)
+    word = Document()
+    normal = word.styles['Normal']
+    normal.font.name = 'Microsoft YaHei'
+    normal.font.size = Pt(10.5)
+
+    for index, page in enumerate(doc, start=1):
+        if index > 1:
+            word.add_page_break()
+        heading = word.add_paragraph()
+        heading_run = heading.add_run(f"Page {index}")
+        heading_run.bold = True
+
+        text = page.get_text('text').strip()
+        if not text:
+            word.add_paragraph('[No selectable text found on this page]')
+            continue
+        for block in text.split('\n'):
+            block = block.strip()
+            if block:
+                word.add_paragraph(block)
+    doc.close()
+    word.save(output_docx)
 
 
 def cmd_office2pdf(args):
-    import subprocess, shutil
+    import shutil
+    import subprocess
     soffice = shutil.which('soffice') or shutil.which('libreoffice')
     if not soffice:
         print("❌ 未找到 LibreOffice，请先安装：https://www.libreoffice.org/")
@@ -164,6 +230,7 @@ def cmd_office2pdf(args):
 def cmd_pdf2excel(args):
     import pdfplumber
     from openpyxl import Workbook
+    output = ensure_extension(args.output, '.xlsx')
     wb = Workbook()
     wb.remove(wb.active)
     found = 0
@@ -177,18 +244,19 @@ def cmd_pdf2excel(args):
     if found == 0:
         print("⚠️ 未在 PDF 中检测到表格")
         return
-    wb.save(args.output)
-    print(f"✅ 共提取 {found} 个表格 -> {args.output}")
+    wb.save(output)
+    print(f"✅ 共提取 {found} 个表格 -> {output}")
 
 
 def cmd_pdf2text(args):
     import fitz
+    output = ensure_extension(args.output, '.txt')
     doc = fitz.open(args.input)
     text = [page.get_text() for page in doc]
     doc.close()
-    with open(args.output, 'w', encoding='utf-8') as f:
+    with open(output, 'w', encoding='utf-8') as f:
         f.write("\n".join(text))
-    print(f"✅ 提取文字完成 -> {args.output}")
+    print(f"✅ 提取文字完成 -> {output}")
 
 
 # ==================== 命令行定义 ====================
@@ -199,7 +267,7 @@ def build_parser():
 
     p = sub.add_parser('merge', help='合并多个 PDF')
     p.add_argument('inputs', nargs='+', help='输入 PDF（可多个）')
-    p.add_argument('-o', '--output', required=True, help='输出文件')
+    p.add_argument('-o', '--output', required=True, help='输出文件，未写 .pdf 会自动补充')
     p.set_defaults(func=cmd_merge)
 
     p = sub.add_parser('split', help='拆分 PDF')
@@ -211,19 +279,19 @@ def build_parser():
     p = sub.add_parser('delete', help='删除指定页面')
     p.add_argument('input')
     p.add_argument('-p', '--pages', required=True, help='要删除的页码，如 2,4,6-8')
-    p.add_argument('-o', '--output', required=True)
+    p.add_argument('-o', '--output', required=True, help='输出文件，未写 .pdf 会自动补充')
     p.set_defaults(func=cmd_delete)
 
     p = sub.add_parser('extract', help='提取指定页面')
     p.add_argument('input')
     p.add_argument('-p', '--pages', required=True, help='要提取的页码，如 1,3,5-7')
-    p.add_argument('-o', '--output', required=True)
+    p.add_argument('-o', '--output', required=True, help='输出文件，未写 .pdf 会自动补充')
     p.set_defaults(func=cmd_extract)
 
     p = sub.add_parser('reorder', help='调整页面顺序')
     p.add_argument('input')
     p.add_argument('-r', '--order', required=True, help='新顺序，如 3,1,2')
-    p.add_argument('-o', '--output', required=True)
+    p.add_argument('-o', '--output', required=True, help='输出文件，未写 .pdf 会自动补充')
     p.set_defaults(func=cmd_reorder)
 
     p = sub.add_parser('rotate', help='旋转页面')
@@ -231,7 +299,7 @@ def build_parser():
     p.add_argument('-a', '--angle', type=int, choices=[90, 180, 270, -90],
                    required=True, help='旋转角度（顺时针）')
     p.add_argument('-p', '--pages', help='指定页码，不填则全部')
-    p.add_argument('-o', '--output', required=True)
+    p.add_argument('-o', '--output', required=True, help='输出文件，未写 .pdf 会自动补充')
     p.set_defaults(func=cmd_rotate)
 
     p = sub.add_parser('pdf2img', help='PDF 转图片')
@@ -243,12 +311,14 @@ def build_parser():
 
     p = sub.add_parser('img2pdf', help='图片转 PDF')
     p.add_argument('inputs', nargs='+', help='输入图片（可多个）')
-    p.add_argument('-o', '--output', required=True)
+    p.add_argument('-o', '--output', required=True, help='输出 PDF，未写 .pdf 会自动补充')
     p.set_defaults(func=cmd_img2pdf)
 
     p = sub.add_parser('pdf2word', help='PDF 转 Word')
     p.add_argument('input')
-    p.add_argument('-o', '--output', required=True, help='输出 .docx')
+    p.add_argument('-o', '--output', required=True, help='输出 .docx，未写 .docx 会自动补充')
+    p.add_argument('--mode', choices=['layout', 'text'], default='layout',
+                   help='layout=尽量保留原版式；text=纯文本优化模式，排版更干净但不保留原版式')
     p.set_defaults(func=cmd_pdf2word)
 
     p = sub.add_parser('office2pdf', help='Word/PPT 转 PDF（需 LibreOffice）')
@@ -258,12 +328,12 @@ def build_parser():
 
     p = sub.add_parser('pdf2excel', help='PDF 表格转 Excel')
     p.add_argument('input')
-    p.add_argument('-o', '--output', required=True, help='输出 .xlsx')
+    p.add_argument('-o', '--output', required=True, help='输出 .xlsx，未写 .xlsx 会自动补充')
     p.set_defaults(func=cmd_pdf2excel)
 
     p = sub.add_parser('pdf2text', help='PDF 转纯文本')
     p.add_argument('input')
-    p.add_argument('-o', '--output', required=True, help='输出 .txt')
+    p.add_argument('-o', '--output', required=True, help='输出 .txt，未写 .txt 会自动补充')
     p.set_defaults(func=cmd_pdf2text)
 
     return parser
