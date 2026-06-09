@@ -16,8 +16,8 @@
 | `pdf_toolbox.py` | 命令行主程序 |
 | `pdf_toolbox_gui.py` | 图形界面程序 |
 | `requirements.txt` | Python 依赖清单 |
-| `install.bat` | Windows 双击自动安装依赖 |
-| `run_gui.bat` | Windows 双击启动图形界面 |
+| `install.bat` | Windows 双击自动安装依赖，脚本内容使用英文，避免中文编码导致的问题 |
+| `run_gui.bat` | Windows 双击启动图形界面，脚本内容使用英文，避免中文编码导致的问题 |
 
 > 你提到的 `dat` 文件，如果目的是“双击自动安装”，Windows 上通常应使用 `.bat` 批处理文件。因此本项目提供的是 `install.bat`。
 
@@ -25,7 +25,9 @@
 
 ### 1. 安装 Python
 
-先安装 Python 3.9 或更高版本：
+推荐安装 Python 3.9 或更高版本；**Python 3.8 通常也可以使用**。
+
+下载地址：
 
 https://www.python.org/downloads/
 
@@ -49,6 +51,8 @@ install.bat
 python -m pip install -r requirements.txt
 ```
 
+`install.bat` 内部提示文字已改为英文，减少 Windows 批处理中文编码乱码或执行异常的概率。
+
 ### 3. 双击启动图形界面
 
 依赖安装完成后，双击：
@@ -62,6 +66,8 @@ run_gui.bat
 ```bash
 python pdf_toolbox_gui.py
 ```
+
+`run_gui.bat` 内部提示文字同样使用英文。
 
 ## 图形界面使用说明
 
@@ -106,6 +112,7 @@ python pdf_toolbox_gui.py
 
 ## 重要说明
 
+- **Python 版本**：推荐 Python 3.9+；如果你已经安装 Python 3.8，可以先直接使用，依赖安装失败时再考虑升级。
 - **PDF→Word / PDF→Excel** 对扫描件或图片型 PDF 效果有限，这类文件需要 OCR。
 - **Word/PPT→PDF** 需要额外安装 [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/)。
 - `install.bat` 只安装 Python 依赖，不会自动安装 LibreOffice。
